@@ -458,15 +458,6 @@ bool NetworkInterface::handle_request(FloonocNode *node, vp::IoReq *req, int fro
     }
     else
     {
-<<<<<<< HEAD
-        // Received a data (non addr) request from a router.
-        // Account it on the corresponding burst and notifiy the burst initator (cluster)
-        this->trace.msg(vp::Trace::LEVEL_TRACE, "Received non-addr response from router (req: %p, base: 0x%x, size: 0x%x, position: (%d, %d))\n",
-                        req, req->get_addr(), req->get_size(), this->x, this->y);
-        //this->handle_response(req); //ZL-MOD: why the response is handled by "this" NI and not the source NI???
-        NetworkInterface *ni = *(NetworkInterface **)req->arg_get(FlooNoc::REQ_SRC_NI);
-        ni->handle_response(req);
-=======
         this->trace.msg(vp::Trace::LEVEL_DEBUG,
             "Received request from router (req: %p, base: 0x%x, size: 0x%x, isaddr: (%d), "
             "position: (%d, %d)) origin Ni: (%d, %d)\n",
@@ -519,7 +510,6 @@ bool NetworkInterface::handle_request(FloonocNode *node, vp::IoReq *req, int fro
         {
             delete req;
         }
->>>>>>> origin/floonoc_tests
     }
 
     return false;
