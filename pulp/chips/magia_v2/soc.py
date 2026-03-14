@@ -20,6 +20,7 @@ import gvsoc.systree
 import memory.memory as memory
 import vp.clock_domain
 import utils.loader.loader
+import pcie_vfio_bridge.pcie_vfio_mem_bridge
 
 from pulp.chips.magia_v2.tile import MagiaV2Tile
 from pulp.chips.magia_v2.arch import *
@@ -71,6 +72,15 @@ class MagiaV2Soc(gvsoc.systree.Component):
             cluster.append(MagiaV2Tile(self, f'magia-tile-{id}', tree, parser, id))
 
         l2_mem = memory.Memory(self, f'L2-mem', size=MagiaArch.L2_SIZE,latency=MagiaDSE.SOC_L2_LATENCY)
+        
+        test = pcie_vfio_bridge.pcie_vfio_mem_bridge.PCIeVfioMemBridge(
+                 self,
+                 'l2-vfio-bridge',
+                 socket_path='/tmp/gvsoc.sock',
+                 bar0_size=0x1000,
+                 bar2_size=2 ** math.ceil(math.log2(MagiaArch.L2_SIZE)),   # take the next power2 of the L2 so that the BAR is aligned 
+                 latency=MagiaDSE.SOC_L2_LATENCY
+                )
 
         # Create Tile matrix for IDs
         # --------------> X direction
@@ -397,5 +407,5 @@ class MagiaV2Soc(gvsoc.systree.Component):
         for id in range(0,tree.nb_clusters):
             if (id == 0):
                 loader.o_OUT(cluster[id].i_LOADER()) #only cluster connected to the corner loads the elf
-            loader.o_START(cluster[id].i_FETCHEN())
+            #loader.o_START(cluster[id].i_FETCHEN())
             loader.o_ENTRY(cluster[id].i_ENTRY())
