@@ -19,7 +19,6 @@
 import gvsoc.systree
 import memory.memory as memory
 import vp.clock_domain
-import utils.loader.loader
 import pcie_vfio_bridge.pcie_vfio_mem_bridge
 
 from pulp.chips.magia_v2.tile import MagiaV2Tile
@@ -49,14 +48,10 @@ def calculate_north_south(n, tiling):
     return north, south
 
 class MagiaV2Soc(gvsoc.systree.Component):
-    def __init__(self, parent, name, tree, parser, binary):
+    def __init__(self, parent, name, tree, parser):
         super().__init__(parent, name)
 
         self.set_attributes(tree)
-
-        # Bin Loader
-        loader=utils.loader.loader.ElfLoader(self, f'loader', binary=binary)
-        self.loader = loader
 
         # Simulation engine killer
         killer=KillModule(self,'kill-module',kill_addr_base=MagiaArch.TEST_END_ADDR_START,kill_addr_size=MagiaArch.TEST_END_SIZE,nb_cores_to_wait=tree.nb_clusters)
@@ -73,13 +68,11 @@ class MagiaV2Soc(gvsoc.systree.Component):
 
         l2_mem = memory.Memory(self, f'L2-mem', size=MagiaArch.L2_SIZE,latency=MagiaDSE.SOC_L2_LATENCY)
         
-        test = pcie_vfio_bridge.pcie_vfio_mem_bridge.PCIeVfioMemBridge(
+        pcie_ep = pcie_vfio_bridge.pcie_vfio_mem_bridge.PCIeVfioMemBridge(
                  self,
                  'l2-vfio-bridge',
                  socket_path='/tmp/gvsoc.sock',
-                 bar0_size=0x1000,
-                 bar2_size=2 ** math.ceil(math.log2(MagiaArch.L2_SIZE)),   # take the next power2 of the L2 so that the BAR is aligned 
-                 latency=MagiaDSE.SOC_L2_LATENCY
+                 bar0_size=0x1000
                 )
 
         # Create Tile matrix for IDs
@@ -218,6 +211,8 @@ class MagiaV2Soc(gvsoc.systree.Component):
                 noc.o_WIDE_BIND(l2_mem.i_INPUT(), x=0, y=y)
         
         noc.o_MAP_DIR(base=MagiaArch.L2_ADDR_START,size=MagiaArch.L2_SIZE, dir=FlooNocDirection.LEFT,name=f'mem_left', rm_base=True)
+
+        pcie_ep.o_MEM(l2_mem.i_INPUT())
 
         # Fractal tree routing
         for lvl in range(0,int(math.log2(tree.nb_clusters))):
@@ -403,9 +398,7 @@ class MagiaV2Soc(gvsoc.systree.Component):
                     fsync_center_v[lvl-1][1].o_MASTER_EAST_WEST(fsync_root.i_SLAVE_EAST())
                     fsync_root.o_SLAVE_EAST(fsync_center_v[lvl-1][1].i_MASTER_EAST_WEST())
 
-        # Bind loader
+        # Bind pcie loader
         for id in range(0,tree.nb_clusters):
-            if (id == 0):
-                loader.o_OUT(cluster[id].i_LOADER()) #only cluster connected to the corner loads the elf
-            #loader.o_START(cluster[id].i_FETCHEN())
-            loader.o_ENTRY(cluster[id].i_ENTRY())
+            pcie_ep.o_FETCH_ENABLE(cluster[id].i_FETCHEN())
+            pcie_ep.o_ENTRY_ADDR(cluster[id].i_ENTRY())
