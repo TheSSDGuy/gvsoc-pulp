@@ -54,7 +54,7 @@ class MagiaV2Soc(gvsoc.systree.Component):
         self.set_attributes(tree)
 
         # Simulation engine killer
-        killer=KillModule(self,'kill-module',kill_addr_base=MagiaArch.TEST_END_ADDR_START,kill_addr_size=MagiaArch.TEST_END_SIZE,nb_cores_to_wait=tree.nb_clusters)
+        killer=KillModule(self,'kill-module',kill_addr_base=MagiaArch.TEST_END_ADDR_START,kill_addr_size=MagiaArch.TEST_END_SIZE,nb_cores_to_wait=tree.nb_clusters,done_irq_enable=True)
 
         # Single clock domain
         clock = vp.clock_domain.Clock_domain(self, 'tile-clock',
@@ -212,7 +212,11 @@ class MagiaV2Soc(gvsoc.systree.Component):
         
         noc.o_MAP_DIR(base=MagiaArch.L2_ADDR_START,size=MagiaArch.L2_SIZE, dir=FlooNocDirection.LEFT,name=f'mem_left', rm_base=True)
 
+        # Bind PCIe endpoint to L2 memory
         pcie_ep.o_MEM(l2_mem.i_INPUT())
+
+        # Bind kill module to PCIe endpoint
+        killer.o_IRQ_DONE(pcie_ep.i_IRQ_DONE())
 
         # Fractal tree routing
         for lvl in range(0,int(math.log2(tree.nb_clusters))):
