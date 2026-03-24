@@ -91,6 +91,7 @@ vp::IoReqStatus KillModule::req(vp::Block *__this, vp::IoReq *req)
       }
 
       if (_this->nb_recv_kill_reqs==_this->nb_cores_to_wait) {
+        _this->nb_recv_kill_reqs=0;
         if (_this->done_irq_enable) {
           _this->irq_done.sync(true);
           //trigger fsm
