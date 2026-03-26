@@ -72,7 +72,8 @@ class MagiaV2Soc(gvsoc.systree.Component):
                  self,
                  'l2-vfio-bridge',
                  socket_path='/tmp/gvsoc.sock',
-                 bar0_size=0x1000
+                 bar0_size=0x1000,
+                 dma_chunk_bytes=16
                 )
 
         # Create Tile matrix for IDs
